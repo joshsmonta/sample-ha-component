@@ -1,0 +1,15 @@
+{
+  "codeowners": [
+    "@joshsmonta"
+  ],
+  "config_flow": false,
+  "dependencies": [],
+  "documentation": "https://github.com/boralyl/github-custom-component-tutorial",
+  "domain": "github_custom",
+  "iot_class": "cloud_polling",
+  "name": "Github Custom",
+  "requirements": [
+    "gidgethub[aiohttp]==5.4.0"
+  ],
+  "version": "1.0.0"
+}
