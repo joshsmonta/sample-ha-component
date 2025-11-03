@@ -1,13 +1,10 @@
 """Tests for the sensor module."""
-from unittest.mock import AsyncMock, MagicMock
-
 from gidgethub import GitHubException
-import pytest
+from pytest_homeassistant_custom_component.async_mock import AsyncMock, MagicMock
 
 from custom_components.github_custom.sensor import GitHubRepoSensor
 
 
-@pytest.mark.asyncio
 async def test_async_update_success(hass, aioclient_mock):
     """Tests a fully successful async_update."""
     github = MagicMock()
@@ -68,11 +65,10 @@ async def test_async_update_success(hass, aioclient_mock):
         "views_unique": 5000,
     }
     assert expected == sensor.attrs
-    assert expected == sensor.extra_state_attributes
+    assert expected == sensor.device_state_attributes
     assert sensor.available is True
 
 
-@pytest.mark.asyncio
 async def test_async_update_failed():
     """Tests a failed async_update."""
     github = MagicMock()

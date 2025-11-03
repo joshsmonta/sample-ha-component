@@ -1,10 +1,8 @@
 """GitHub sensor platform."""
-from __future__ import annotations
-
-from collections.abc import Callable
 from datetime import timedelta
 import logging
-from typing import Any
+import re
+from typing import Any, Callable, Dict, Optional
 
 from aiohttp import ClientError
 import gidgethub
@@ -24,6 +22,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.typing import (
     ConfigType,
     DiscoveryInfoType,
+    HomeAssistantType,
 )
 import voluptuous as vol
 
@@ -68,12 +67,9 @@ async def async_setup_entry(
     hass: core.HomeAssistant,
     config_entry: config_entries.ConfigEntry,
     async_add_entities,
-) -> None:
+):
     """Setup sensors from a config entry created in the integrations UI."""
     config = hass.data[DOMAIN][config_entry.entry_id]
-    # Update our config to include new repos and remove those that have been removed.
-    if config_entry.options:
-        config.update(config_entry.options)
     session = async_get_clientsession(hass)
     github = GitHubAPI(session, "requester", oauth_token=config[CONF_ACCESS_TOKEN])
     sensors = [GitHubRepoSensor(github, repo) for repo in config[CONF_REPOS]]
@@ -81,10 +77,10 @@ async def async_setup_entry(
 
 
 async def async_setup_platform(
-    hass: core.HomeAssistant,
+    hass: HomeAssistantType,
     config: ConfigType,
     async_add_entities: Callable,
-    discovery_info: DiscoveryInfoType | None = None,
+    discovery_info: Optional[DiscoveryInfoType] = None,
 ) -> None:
     """Set up the sensor platform."""
     session = async_get_clientsession(hass)
@@ -96,11 +92,11 @@ async def async_setup_platform(
 class GitHubRepoSensor(Entity):
     """Representation of a GitHub Repo sensor."""
 
-    def __init__(self, github: GitHubAPI, repo: dict[str, str]):
+    def __init__(self, github: GitHubAPI, repo: Dict[str, str]):
         super().__init__()
         self.github = github
         self.repo = repo["path"]
-        self.attrs: dict[str, Any] = {ATTR_PATH: self.repo}
+        self.attrs: Dict[str, Any] = {ATTR_PATH: self.repo}
         self._name = repo.get("name", self.repo)
         self._state = None
         self._available = True
@@ -121,15 +117,14 @@ class GitHubRepoSensor(Entity):
         return self._available
 
     @property
-    def state(self) -> str | None:
+    def state(self) -> Optional[str]:
         return self._state
 
     @property
-    def extra_state_attributes(self) -> dict[str, Any]:
+    def device_state_attributes(self) -> Dict[str, Any]:
         return self.attrs
 
-    async def async_update(self) -> None:
-        """Update all sensors."""
+    async def async_update(self):
         try:
             repo_url = f"/repos/{self.repo}"
             repo_data = await self.github.getitem(repo_url)
@@ -187,6 +182,4 @@ class GitHubRepoSensor(Entity):
             self._available = True
         except (ClientError, gidgethub.GitHubException):
             self._available = False
-            _LOGGER.exception(
-                "Error retrieving data from GitHub for sensor %s", self.name
-            )
+            _LOGGER.exception("Error retrieving data from GitHub.")
