@@ -127,9 +127,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         self.config_entry = config_entry
 
-    async def async_step_init(
-        self, user_input: Dict[str, Any] = None
-    ) -> Dict[str, Any]:
+    async def async_step_init(self, user_input: Dict[str, Any] = None) -> Dict[str, Any]:
         """Manage the options for the custom component."""
         errors: Dict[str, str] = {}
         # Grab all configured repos from the entity registry so we can populate the
