@@ -1,6 +1,7 @@
 """Tests for the sensor module."""
 from gidgethub import GitHubException
-from pytest_homeassistant_custom_component.async_mock import AsyncMock, MagicMock
+# from pytest_homeassistant_custom_component import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from custom_components.github_custom.sensor import GitHubRepoSensor
 

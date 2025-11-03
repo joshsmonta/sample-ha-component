@@ -4,22 +4,28 @@ from unittest import mock
 from gidgethub import BadRequest
 from homeassistant.const import CONF_ACCESS_TOKEN, CONF_NAME, CONF_PATH
 import pytest
-from pytest_homeassistant_custom_component.async_mock import AsyncMock, patch
+# from pytest_homeassistant_custom_component import AsyncMock, patch
+from unittest.mock import AsyncMock, patch
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.github_custom import config_flow
-from custom_components.github_custom.const import CONF_REPOS
+from custom_components.github_custom.const import CONF_REPOS, DOMAIN
 
 
-def test_validate_path_valid():
+@patch("custom_components.github_custom.config_flow.GitHubAPI")
+async def test_validate_path_valid(m_github, hass):
     """Test no exception is raised for a valid path."""
-    config_flow.validate_path("home-assistant/core")
+    m_instance = AsyncMock()
+    m_instance.getitem = AsyncMock()
+    m_github.return_value = m_instance
+    await config_flow.validate_path("home-assistant/core", "access-token", hass)
 
 
-def test_validate_path_invalid():
+async def test_validate_path_invalid(hass):
     """Test a ValueError is raised when the path is not valid."""
     for bad_path in ("home-assistant", "home-assistant/core/foo"):
         with pytest.raises(ValueError):
-            config_flow.validate_path(bad_path)
+            await config_flow.validate_path(bad_path, "access-token", hass)
 
 
 @patch("custom_components.github_custom.config_flow.GitHubAPI")
@@ -103,6 +109,9 @@ async def test_flow_repo_init_form(hass):
 
 async def test_flow_repo_path_invalid(hass):
     """Test errors populated when path is invalid."""
+    config_flow.GithubCustomConfigFlow.data = {
+        CONF_ACCESS_TOKEN: "token",
+    }
     _result = await hass.config_entries.flow.async_init(
         config_flow.DOMAIN, context={"source": "repo"}
     )
@@ -125,13 +134,16 @@ async def test_flow_repo_add_another(hass):
         _result["flow_id"],
         user_input={CONF_PATH: "home-assistant/core", "add_another": True},
     )
-    print(result)
     assert "repo" == result["step_id"]
     assert "form" == result["type"]
 
 
-async def test_flow_repo_creates_config_entry(hass):
+@patch("custom_components.github_custom.config_flow.GitHubAPI")
+async def test_flow_repo_creates_config_entry(m_github, hass):
     """Test the config entry is successfully created."""
+    m_instance = AsyncMock()
+    m_instance.getitem = AsyncMock()
+    m_github.return_value = m_instance
     config_flow.GithubCustomConfigFlow.data = {
         CONF_ACCESS_TOKEN: "token",
         CONF_REPOS: [],
@@ -160,3 +172,102 @@ async def test_flow_repo_creates_config_entry(hass):
         "result": mock.ANY,
     }
     assert expected == result
+
+
+@patch("custom_components.github_custom.sensor.GitHubAPI")
+async def test_options_flow_init(m_github, hass):
+    """Test config flow options."""
+    m_instance = AsyncMock()
+    m_instance.getitem = AsyncMock()
+    m_github.return_value = m_instance
+
+    config_entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="kodi_recently_added_media",
+        data={
+            CONF_ACCESS_TOKEN: "access-token",
+            CONF_REPOS: [{"path": "home-assistant/core", "name": "HA Core"}],
+        },
+    )
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    # show initial form
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    assert "form" == result["type"]
+    assert "init" == result["step_id"]
+    assert {} == result["errors"]
+    # Verify multi-select options populated with configured repos.
+    assert {"sensor.ha_core": "HA Core"} == result["data_schema"].schema[
+        "repos"
+    ].options
+
+
+@patch("custom_components.github_custom.sensor.GitHubAPI")
+async def test_options_flow_remove_repo(m_github, hass):
+    """Test config flow options."""
+    m_instance = AsyncMock()
+    m_instance.getitem = AsyncMock()
+    m_github.return_value = m_instance
+
+    config_entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="kodi_recently_added_media",
+        data={
+            CONF_ACCESS_TOKEN: "access-token",
+            CONF_REPOS: [{"path": "home-assistant/core", "name": "HA Core"}],
+        },
+    )
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    # show initial form
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    # submit form with options
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], user_input={"repos": []}
+    )
+    assert "create_entry" == result["type"]
+    assert "" == result["title"]
+    assert result["result"] is True
+    assert {CONF_REPOS: []} == result["data"]
+
+
+@patch("custom_components.github_custom.sensor.GitHubAPI")
+@patch("custom_components.github_custom.config_flow.GitHubAPI")
+async def test_options_flow_add_repo(m_github, m_github_cf, hass):
+    """Test config flow options."""
+    m_instance = AsyncMock()
+    m_instance.getitem = AsyncMock()
+    m_github.return_value = m_instance
+    m_github_cf.return_value = m_instance
+
+    config_entry = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="kodi_recently_added_media",
+        data={
+            CONF_ACCESS_TOKEN: "access-token",
+            CONF_REPOS: [{"path": "home-assistant/core", "name": "HA Core"}],
+        },
+    )
+    config_entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(config_entry.entry_id)
+    await hass.async_block_till_done()
+
+    # show initial form
+    result = await hass.config_entries.options.async_init(config_entry.entry_id)
+    # submit form with options
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        user_input={"repos": ["sensor.ha_core"], "path": "boralyl/steam-wishlist"},
+    )
+    assert "create_entry" == result["type"]
+    assert "" == result["title"]
+    assert result["result"] is True
+    expected_repos = [
+        {"path": "home-assistant/core", "name": "HA Core"},
+        {"path": "boralyl/steam-wishlist", "name": "boralyl/steam-wishlist"},
+    ]
+    assert {CONF_REPOS: expected_repos} == result["data"]

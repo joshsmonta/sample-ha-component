@@ -1,5 +1,5 @@
 # From our manifest.json for our custom component
-gidgethub[aiohttp]
+gidgethub[aiohttp]==5.2.1
 cryptography
 
 # Strictly for tests
