@@ -9,10 +9,7 @@ from homeassistant.const import CONF_ACCESS_TOKEN, CONF_NAME, CONF_PATH, CONF_UR
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.entity_registry import (
-    async_entries_for_config_entry,
-    async_get_registry,
-)
+from homeassistant.helpers import entity_registry as er 
 import voluptuous as vol
 
 from .const import CONF_REPOS, DOMAIN
@@ -137,8 +134,8 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         errors: Dict[str, str] = {}
         # Grab all configured repos from the entity registry so we can populate the
         # multi-select dropdown that will allow a user to remove a repo.
-        entity_registry = await async_get_registry(self.hass)
-        entries = async_entries_for_config_entry(
+        entity_registry = await er.async_get_registry(self.hass)
+        entries = er.async_entries_for_config_entry(
             entity_registry, self.config_entry.entry_id
         )
         # Default value for our multi-select.
