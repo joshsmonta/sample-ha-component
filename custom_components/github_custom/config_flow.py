@@ -132,7 +132,7 @@ class OptionsFlowHandler(config_entries.OptionsFlow):
         errors: Dict[str, str] = {}
         # Grab all configured repos from the entity registry so we can populate the
         # multi-select dropdown that will allow a user to remove a repo.
-        entity_registry = await er.async_get(self.hass)
+        entity_registry = er.async_get(self.hass)
         entries = er.async_entries_for_config_entry(
             entity_registry, self.config_entry.entry_id
         )
